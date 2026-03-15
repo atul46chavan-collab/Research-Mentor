@@ -1,21 +1,12 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import spacy
+import re
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.cluster import KMeans
 import numpy as np
 
 app = Flask(__name__)
 CORS(app)
-
-# Load spaCy model
-try:
-    nlp = spacy.load("en_core_web_sm")
-except:
-    # Fallback if not installed (though requirements should handle it)
-    import os
-    os.system("python -m spacy download en_core_web_sm")
-    nlp = spacy.load("en_core_web_sm")
 
 LIMITATION_KEYWORDS = [
     "future work", "limited dataset", "lack of research", 
@@ -24,6 +15,11 @@ LIMITATION_KEYWORDS = [
     "limitation", "weakness", "restricted to", "small cohort"
 ]
 
+def split_into_sentences(text):
+    # Simple regex-based sentence splitter
+    sentences = re.split(r'(?<!\w\.\w.)(?<![A-Z][a-z]\.)(?<=\.|\?)\s', text)
+    return [s.strip() for s in sentences if s.strip()]
+
 @app.route('/extract-limitations', methods=['POST'])
 def extract_limitations():
     data = request.json
@@ -31,11 +27,11 @@ def extract_limitations():
     extracted_sentences = []
 
     for abstract in abstracts:
-        doc = nlp(abstract)
-        for sent in doc.sents:
-            sentence_text = sent.text.lower()
+        sentences = split_into_sentences(abstract)
+        for sent in sentences:
+            sentence_text = sent.lower()
             if any(kw in sentence_text for kw in LIMITATION_KEYWORDS):
-                extracted_sentences.append(sent.text.strip())
+                extracted_sentences.append(sent)
 
     return jsonify({"limitations": list(set(extracted_sentences))})
 

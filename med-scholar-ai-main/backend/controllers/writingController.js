@@ -5,6 +5,7 @@ const getModel = (temp = 0.3) => new ChatGoogleGenerativeAI({
   apiKey: process.env.GOOGLE_API_KEY,
   model: "gemini-flash-latest",
   temperature: temp,
+  maxRetries: 1,
 });
 
 export const grammarCheck = async (req, res) => {

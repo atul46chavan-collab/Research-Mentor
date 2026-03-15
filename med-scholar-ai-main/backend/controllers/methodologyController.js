@@ -13,6 +13,7 @@ export const generateMethodology = async (req, res) => {
       apiKey: process.env.GOOGLE_API_KEY,
       model: "gemini-flash-latest",
       temperature: 0.7,
+      maxRetries: 1,
     });
 
     const template = `

@@ -21,6 +21,17 @@ const LiteratureReview = () => {
   useEffect(() => {
     const saved = localStorage.getItem('research_papers');
     if (saved) setPapers(JSON.parse(saved));
+    
+    // Load previously generated results
+    const savedReview = localStorage.getItem('literature_review_result');
+    const savedCorr = localStorage.getItem('correlation_result');
+    const savedSyst = localStorage.getItem('systematic_result');
+    const savedMeta = localStorage.getItem('meta_result');
+    
+    if (savedReview) setReview(savedReview);
+    if (savedCorr) setCorrelationResult(savedCorr);
+    if (savedSyst) setSystematicResult(savedSyst);
+    if (savedMeta) setMetaResult(savedMeta);
   }, []);
 
   const topic = localStorage.getItem('research_topic') || "medical research";
@@ -31,16 +42,20 @@ const LiteratureReview = () => {
       return;
     }
     setLoading(true);
-    setReview("");
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
     try {
       const response = await fetch('http://localhost:5000/api/literature-review', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ abstracts: papers.map(p => p.abstract) })
+        body: JSON.stringify({ abstracts: papers.map(p => p.abstract) }),
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
       if (!response.ok) throw new Error('Failed');
       const data = await response.json();
       setReview(data.review);
+      localStorage.setItem('literature_review_result', data.review);
     } catch (error) {
       toast({ title: "Error", description: "Could not generate review.", variant: "destructive" });
     } finally { setLoading(false); }
@@ -49,14 +64,19 @@ const LiteratureReview = () => {
   const generateCorrelation = async () => {
     if (papers.length === 0) { toast({ title: "No papers", description: "Search first.", variant: "destructive" }); return; }
     setLoading(true); setCorrelationResult("");
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
     try {
       const resp = await fetch('http://localhost:5000/api/correlation-analysis', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ abstracts: papers.map(p => p.abstract) })
+        body: JSON.stringify({ abstracts: papers.map(p => p.abstract) }),
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
       if (!resp.ok) throw new Error('Failed');
       const data = await resp.json();
       setCorrelationResult(data.analysis);
+      localStorage.setItem('correlation_result', data.analysis);
     } catch (error) { toast({ title: "Error", description: "Could not run correlation analysis.", variant: "destructive" }); }
     finally { setLoading(false); }
   };
@@ -64,14 +84,19 @@ const LiteratureReview = () => {
   const generateSystematic = async () => {
     if (papers.length === 0) { toast({ title: "No papers", description: "Search first.", variant: "destructive" }); return; }
     setLoading(true); setSystematicResult("");
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
     try {
       const resp = await fetch('http://localhost:5000/api/systematic-review', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ abstracts: papers.map(p => p.abstract), topic })
+        body: JSON.stringify({ abstracts: papers.map(p => p.abstract), topic }),
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
       if (!resp.ok) throw new Error('Failed');
       const data = await resp.json();
       setSystematicResult(data.review);
+      localStorage.setItem('systematic_result', data.review);
     } catch (error) { toast({ title: "Error", description: "Could not generate systematic review.", variant: "destructive" }); }
     finally { setLoading(false); }
   };
@@ -79,14 +104,19 @@ const LiteratureReview = () => {
   const generateMeta = async () => {
     if (papers.length === 0) { toast({ title: "No papers", description: "Search first.", variant: "destructive" }); return; }
     setLoading(true); setMetaResult("");
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
     try {
       const resp = await fetch('http://localhost:5000/api/meta-analysis', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ abstracts: papers.map(p => p.abstract), topic })
+        body: JSON.stringify({ abstracts: papers.map(p => p.abstract), topic }),
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
       if (!resp.ok) throw new Error('Failed');
       const data = await resp.json();
       setMetaResult(data.analysis);
+      localStorage.setItem('meta_result', data.analysis);
     } catch (error) { toast({ title: "Error", description: "Could not generate meta-analysis.", variant: "destructive" }); }
     finally { setLoading(false); }
   };

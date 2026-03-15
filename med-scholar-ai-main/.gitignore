@@ -22,3 +22,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Sensitive files
+backend/.env
+backend/search_history.json
+node_modules
+venv
+__pycache__
+*.pyc

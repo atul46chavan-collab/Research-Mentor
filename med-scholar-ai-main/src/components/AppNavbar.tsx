@@ -8,6 +8,7 @@ import {
   FlaskConical,
   CheckCircle,
   LayoutDashboard,
+  History,
   Menu,
   X,
 } from "lucide-react";
@@ -21,6 +22,7 @@ const navItems = [
   { path: "/gaps", label: "Gap Finder", icon: Lightbulb },
   { path: "/methodology", label: "Methodology", icon: FlaskConical },
   { path: "/citations", label: "Citations", icon: CheckCircle },
+  { path: "/history", label: "History", icon: History },
 ];
 
 const AppNavbar = () => {

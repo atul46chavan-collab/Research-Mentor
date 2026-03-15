@@ -15,8 +15,8 @@ export const findResearchGaps = async (req, res) => {
     let clusters = [];
 
     try {
-      const nlpResponse = await axios.post('http://localhost:5001/extract-limitations', { abstracts }, { timeout: 3000 });
-      const clusterResponse = await axios.post('http://localhost:5001/cluster-topics', { abstracts }, { timeout: 3000 });
+      const nlpResponse = await axios.post('http://127.0.0.1:5001/extract-limitations', { abstracts }, { timeout: 10000 });
+      const clusterResponse = await axios.post('http://127.0.0.1:5001/cluster-topics', { abstracts }, { timeout: 10000 });
       limitations = nlpResponse.data.limitations;
       clusters = clusterResponse.data.clusters;
     } catch (nlpError) {
@@ -36,6 +36,7 @@ export const findResearchGaps = async (req, res) => {
       apiKey: process.env.GOOGLE_API_KEY,
       model: "gemini-flash-latest",
       temperature: 0.7,
+      maxRetries: 1,
     });
 
     const template = `
@@ -53,11 +54,10 @@ export const findResearchGaps = async (req, res) => {
       Existing Clusters: {clusters}
 
       Output in JSON-like structure:
-      {
-        "limitations": [...],
-        "clusters": [{"id": 0, "topic": "...", "count": 2, "is_potential_gap": true}, ...],
+      {{"limitations": [...],
+        "clusters": [{{"id": 0, "topic": "...", "count": 2, "is_potential_gap": true}}, ...],
         "gap_analysis": "..."
-      }
+      }}
     `;
 
     const prompt = new PromptTemplate({
@@ -66,25 +66,40 @@ export const findResearchGaps = async (req, res) => {
     });
 
     const chain = prompt.pipe(model);
-    const response = await chain.invoke({
-      limitations: limitations.length ? limitations.join("\n") : "None detected",
-      clusters: clusters.length ? JSON.stringify(clusters) : "None detected",
-      abstracts: abstracts.slice(0, 5).join("\n\n")
-    });
-
     try {
-      const parsed = JSON.parse(response.content);
-      res.json(parsed);
-    } catch (e) {
+      const response = await chain.invoke({
+        limitations: limitations.length ? limitations.join("\n") : "None detected",
+        clusters: clusters.length ? JSON.stringify(clusters) : "None detected",
+        abstracts: abstracts.slice(0, 5).join("\n\n")
+      });
+
+      try {
+        const cleaned = response.content.replace(/```json/g, '').replace(/```/g, '').trim();
+        const parsed = JSON.parse(cleaned);
+        res.json({
+          ...parsed,
+          limitations: parsed.limitations || limitations,
+          clusters: parsed.clusters || clusters
+        });
+      } catch (e) {
+        res.json({
+          limitations: limitations.length ? limitations : ["Check AI explanation"],
+          clusters: clusters.length ? clusters : [],
+          gap_analysis: response.content
+        });
+      }
+    } catch (aiError) {
+      console.error("Gemini Gap Analysis Error:", aiError.message);
       res.json({
-        limitations: limitations.length ? limitations : ["Check AI explanation"],
+        limitations: limitations.length ? limitations : ["No limitations extracted"],
         clusters: clusters.length ? clusters : [],
-        gap_analysis: response.content
+        gap_analysis: "The AI is currently busy or reaching quota limits. However, based on statistical analysis: " + 
+                     (limitations.length ? "We found " + limitations.length + " specific study limitations." : "No explicit limitations found in abstracts.")
       });
     }
 
   } catch (error) {
-    console.error("Gap Analysis Error:", error.message);
+    console.error("General Gap Analysis Error:", error.message);
     res.status(500).json({ error: "Failed to perform gap analysis." });
   }
 };

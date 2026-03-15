@@ -23,6 +23,23 @@ const GapFinder = () => {
   useEffect(() => {
     const saved = localStorage.getItem('research_papers');
     if (saved) setPapers(JSON.parse(saved));
+    
+    // Load previously generated analysis
+    try {
+      const savedAnalysis = localStorage.getItem('gap_analysis_result');
+      if (savedAnalysis) {
+        const parsed = JSON.parse(savedAnalysis);
+        // Normalize
+        setAnalysis({
+          ...parsed,
+          clusters: Array.isArray(parsed.clusters) ? parsed.clusters : [],
+          limitations: Array.isArray(parsed.limitations) ? parsed.limitations : []
+        });
+      }
+    } catch (e) {
+      console.error("Failed to parse saved analysis", e);
+      localStorage.removeItem('gap_analysis_result');
+    }
   }, []);
 
   const analyzeGaps = async () => {
@@ -38,16 +55,30 @@ const GapFinder = () => {
     setLoading(true);
     setAnalysis(null);
     
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
     try {
       const response = await fetch('http://localhost:5000/api/gap-analysis', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ abstracts: papers.map(p => p.abstract) })
+        body: JSON.stringify({ abstracts: papers.map(p => p.abstract) }),
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
       
       if (!response.ok) throw new Error('Failed to analyze gaps');
       const data = await response.json();
-      setAnalysis(data);
+      
+      // Ensure data has the correct format for the UI
+      const normalizedData = {
+        ...data,
+        clusters: Array.isArray(data.clusters) ? data.clusters : [],
+        limitations: Array.isArray(data.limitations) ? data.limitations : []
+      };
+      
+      setAnalysis(normalizedData);
+      localStorage.setItem('gap_analysis_result', JSON.stringify(normalizedData));
     } catch (error) {
       console.error('Gap Error:', error);
       toast({ 
@@ -93,7 +124,7 @@ const GapFinder = () => {
                 Key Limitations Found
               </h2>
               <div className="flex flex-wrap gap-2">
-                {analysis.limitations.slice(0, 8).map((l: string, idx: number) => (
+                {analysis.limitations?.slice(0, 8).map((l: string, idx: number) => (
                   <span key={idx} className="px-3 py-1.5 rounded-full bg-amber/10 text-amber text-xs font-medium border border-amber/20">
                     {l.length > 50 ? l.substring(0, 47) + '...' : l}
                   </span>
@@ -129,11 +160,11 @@ const GapFinder = () => {
                 animate={{ opacity: 1, y: 0 }}
                 className="glass-card p-6"
               >
-                <ResponsiveContainer width="100%" height={Math.max(200, analysis.clusters.length * 50)}>
+                <ResponsiveContainer width="100%" height={Math.max(200, (analysis.clusters?.length || 0) * 50)}>
                   <BarChart
-                    data={analysis.clusters.map((c: any) => ({
+                    data={(analysis.clusters || []).map((c: any) => ({
                       name: c.topic?.length > 30 ? c.topic.substring(0, 27) + "..." : c.topic || `Topic ${c.id + 1}`,
-                      papers: c.count,
+                      papers: c.count || 0,
                       isGap: c.is_potential_gap,
                     }))}
                     layout="vertical"
@@ -160,7 +191,7 @@ const GapFinder = () => {
                       ]}
                     />
                     <Bar dataKey="papers" name="Papers" radius={[0, 6, 6, 0]}>
-                      {analysis.clusters.map((c: any, index: number) => (
+                      {(analysis.clusters || []).map((c: any, index: number) => (
                         <Cell 
                           key={`cell-${index}`} 
                           fill={c.is_potential_gap ? "hsl(38, 92%, 50%)" : "hsl(250, 60%, 52%)"} 
@@ -183,14 +214,14 @@ const GapFinder = () => {
 
               {/* Cluster Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {analysis.clusters.map((c: any) => (
+                {(analysis.clusters || []).map((c: any) => (
                   <div key={c.id} className={`p-4 rounded-xl border ${c.is_potential_gap ? 'bg-amber/5 border-amber/30' : 'bg-card border-border'}`}>
                     <div className="flex justify-between items-start mb-2">
-                       <span className="text-sm font-bold uppercase tracking-wider text-primary">Topic {c.id + 1}</span>
+                       <span className="text-sm font-bold uppercase tracking-wider text-primary">Topic {(c.id || 0) + 1}</span>
                        {c.is_potential_gap && <Badge variant="outline" className="bg-amber/10 text-amber border-amber/30">Potential Gap</Badge>}
                     </div>
-                    <p className="text-base font-semibold text-foreground mb-1">{c.topic}</p>
-                    <p className="text-xs text-muted-foreground">{c.count} papers in this cluster</p>
+                    <p className="text-base font-semibold text-foreground mb-1">{c.topic || "Unknown Topic"}</p>
+                    <p className="text-xs text-muted-foreground">{c.count || 0} papers in this cluster</p>
                   </div>
                 ))}
               </div>

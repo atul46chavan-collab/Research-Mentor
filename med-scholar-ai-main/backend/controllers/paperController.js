@@ -34,6 +34,7 @@ export const summarizePaper = async (req, res) => {
       apiKey: process.env.GOOGLE_API_KEY,
       model: "gemini-flash-latest",
       temperature: 0.3,
+      maxRetries: 1,
     });
 
     const template = `
@@ -103,5 +104,57 @@ export const getTrendSummary = async (req, res) => {
   } catch (error) {
     console.error("Trend Summary Error:", error.message);
     res.status(500).json({ error: "Failed to generate trend summary" });
+  }
+};
+
+export const extractPaperInsights = async (req, res) => {
+  try {
+    const { abstract } = req.body;
+    if (!abstract) return res.status(400).json({ error: "Abstract is required" });
+
+    if (!process.env.GOOGLE_API_KEY) {
+      return res.json({ keyFindings: "API key not configured.", limitations: "API key not configured." });
+    }
+
+    const model = new ChatGoogleGenerativeAI({
+      apiKey: process.env.GOOGLE_API_KEY,
+      model: "gemini-flash-latest",
+      temperature: 0.3,
+      maxRetries: 1,
+    });
+
+    const template = `Analyze this research abstract and extract exactly two things:
+
+1. KEY FINDINGS: The most important results or conclusions (1-2 sentences max).
+2. LIMITATIONS: Any mentioned or obvious limitations (1-2 sentences max).
+
+If limitations are not explicitly mentioned, infer common ones based on the study type.
+
+Abstract: {abstract}
+
+Respond ONLY in this exact JSON format, no markdown:
+{{"keyFindings": "...", "limitations": "..."}}`;
+
+    const prompt = new PromptTemplate({
+      template,
+      inputVariables: ["abstract"],
+    });
+
+    const chain = prompt.pipe(model);
+    const response = await chain.invoke({ abstract });
+
+    try {
+      const cleaned = response.content.replace(/```json/g, '').replace(/```/g, '').trim();
+      const parsed = JSON.parse(cleaned);
+      res.json(parsed);
+    } catch (e) {
+      res.json({
+        keyFindings: response.content.substring(0, 150),
+        limitations: "See full paper for details."
+      });
+    }
+  } catch (error) {
+    console.error("Extract Insights Error:", error.message);
+    res.json({ keyFindings: "Could not extract.", limitations: "Could not extract." });
   }
 };

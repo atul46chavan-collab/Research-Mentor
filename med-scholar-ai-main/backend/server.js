@@ -1,6 +1,8 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 
 // Import Routes
 import paperRoutes from './routes/paperRoutes.js';
@@ -12,8 +14,15 @@ import dashboardRoutes from './routes/dashboardRoutes.js';
 import analysisRoutes from './routes/analysisRoutes.js';
 import writingRoutes from './routes/writingRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
+import historyRoutes from './routes/historyRoutes.js';
 
-dotenv.config();
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -37,6 +46,7 @@ app.use('/api', dashboardRoutes);
 app.use('/api', analysisRoutes);
 app.use('/api', writingRoutes);
 app.use('/api', chatRoutes);
+app.use('/api', historyRoutes);
 
 // Global Error Handler
 app.use((err, req, res, next) => {

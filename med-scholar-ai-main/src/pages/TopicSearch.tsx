@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Loader2, BookOpen, TrendingUp, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Loader2, BookOpen, TrendingUp, ExternalLink, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { mockPapers, mockTrendSummary, type Paper } from "@/lib/mockData";
+import { type Paper } from "@/lib/mockData";
 import ReactMarkdown from "react-markdown";
 import PaperSummaryModal from "@/components/PaperSummaryModal";
 import {
@@ -16,11 +16,25 @@ const CHART_COLORS = ["hsl(250, 60%, 52%)", "hsl(173, 58%, 39%)", "hsl(38, 92%, 
 const TopicSearch = () => {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
+  const [insightsLoading, setInsightsLoading] = useState(false);
   const [papers, setPapers] = useState<Paper[]>([]);
   const [showTrend, setShowTrend] = useState(false);
   const [trendSummary, setTrendSummary] = useState("");
   const [selectedPaper, setSelectedPaper] = useState<Paper | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
+
+  useEffect(() => {
+    const savedPapers = localStorage.getItem('research_papers');
+    const savedTopic = localStorage.getItem('research_topic');
+    if (savedPapers) {
+      const parsed = JSON.parse(savedPapers);
+      setPapers(parsed);
+      setShowTrend(true);
+      const savedTrend = localStorage.getItem('research_trend_summary');
+      if (savedTrend) setTrendSummary(savedTrend);
+    }
+    if (savedTopic) setQuery(savedTopic);
+  }, []);
 
   const handleSearch = async () => {
     if (!query.trim()) return;
@@ -28,46 +42,84 @@ const TopicSearch = () => {
     setPapers([]);
     setShowTrend(false);
     setCurrentPage(0);
+    setTrendSummary("");
     
     try {
       const response = await fetch(`http://localhost:5000/api/papers?topic=${encodeURIComponent(query)}`);
       if (!response.ok) throw new Error('Search failed');
       const data = await response.json();
       
-      const formattedPapers = data.map((p: any) => ({
+      const formattedPapers: Paper[] = data.map((p: any) => ({
         id: p.id,
         title: p.title,
         authors: Array.isArray(p.authors) ? p.authors.join(', ') : p.authors,
         year: parseInt(p.year) || 0,
         journal: p.journal,
         abstract: p.abstract,
-        keyFindings: "Click summary to read details.",
-        limitations: "See full paper for details."
+        keyFindings: "Extracting...",
+        limitations: "Extracting..."
       }));
 
       setPapers(formattedPapers);
-      localStorage.setItem('research_papers', JSON.stringify(formattedPapers));
+      setShowTrend(true);
+      setLoading(false);
+
+      // Extract AI insights for each paper
+      setInsightsLoading(true);
+      const updatedPapers = await Promise.all(
+        formattedPapers.map(async (paper) => {
+          try {
+            const insightResp = await fetch('http://localhost:5000/api/extract-paper-insights', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ abstract: paper.abstract })
+            });
+            if (insightResp.ok) {
+              const insights = await insightResp.json();
+              return { ...paper, keyFindings: insights.keyFindings, limitations: insights.limitations };
+            }
+          } catch (e) {
+            console.error("Insight extraction error:", e);
+          }
+          return paper;
+        })
+      );
+      setPapers(updatedPapers);
+      setInsightsLoading(false);
+
+      // Save to localStorage for other pages
+      localStorage.setItem('research_papers', JSON.stringify(updatedPapers));
       localStorage.setItem('research_topic', query);
       
+      // Save search history to backend
+      try {
+        await fetch('http://localhost:5000/api/history', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ topic: query, papers: updatedPapers })
+        });
+      } catch (e) {
+        console.error("History save error:", e);
+      }
+
       // Fetch Trend Summary
       try {
         const trendResp = await fetch('http://localhost:5000/api/trend-summary', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ abstracts: formattedPapers.map((p: Paper) => p.abstract), topic: query })
+          body: JSON.stringify({ abstracts: updatedPapers.map((p: Paper) => p.abstract), topic: query })
         });
         if (trendResp.ok) {
           const trendData = await trendResp.json();
           setTrendSummary(trendData.summary);
+          localStorage.setItem('research_trend_summary', trendData.summary);
         }
       } catch (e) {
         console.error("Trend Error", e);
       }
 
-      setShowTrend(true);
     } catch (error) {
       console.error('Search Error:', error);
-    } finally {
       setLoading(false);
     }
   };
@@ -93,7 +145,7 @@ const TopicSearch = () => {
           Research Topic Search
         </h1>
         <p className="text-muted-foreground mb-8">
-          Enter a research topic to find relevant papers and discover trends.
+          Enter a research topic to find 5 most relevant papers from PubMed with AI-extracted insights.
         </p>
       </motion.div>
 
@@ -119,13 +171,21 @@ const TopicSearch = () => {
         {loading && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-center py-16">
             <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto mb-4" />
-            <p className="text-muted-foreground">Searching research databases...</p>
+            <p className="text-muted-foreground">Searching PubMed for relevant papers...</p>
           </motion.div>
         )}
       </AnimatePresence>
 
       {papers.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          {/* Insights loading banner */}
+          {insightsLoading && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2 p-3 mb-4 rounded-lg bg-primary/5 border border-primary/20">
+              <Sparkles className="w-4 h-4 text-primary animate-pulse" />
+              <span className="text-sm text-primary font-medium">AI is extracting Key Findings & Limitations for each paper...</span>
+            </motion.div>
+          )}
+
           {/* Results table */}
           <div className="glass-card overflow-hidden mb-4">
             <div className="p-4 border-b border-border flex items-center justify-between">
@@ -158,11 +218,19 @@ const TopicSearch = () => {
                       transition={{ delay: i * 0.05 }}
                       className="border-b border-border/50 hover:bg-muted/30 transition-colors"
                     >
-                      <td className="p-3 text-foreground font-medium whitespace-nowrap">{p.authors}</td>
+                      <td className="p-3 text-foreground font-medium whitespace-nowrap max-w-[150px] truncate">{p.authors}</td>
                       <td className="p-3 text-muted-foreground">{p.year}</td>
                       <td className="p-3 text-foreground max-w-xs">{p.title}</td>
-                      <td className="p-3 text-muted-foreground max-w-xs text-xs">{p.keyFindings}</td>
-                      <td className="p-3 text-muted-foreground max-w-xs text-xs">{p.limitations}</td>
+                      <td className="p-3 text-muted-foreground max-w-xs text-xs">
+                        {p.keyFindings === "Extracting..." ? (
+                          <span className="flex items-center gap-1 text-primary"><Loader2 className="w-3 h-3 animate-spin" /> Extracting...</span>
+                        ) : p.keyFindings}
+                      </td>
+                      <td className="p-3 text-muted-foreground max-w-xs text-xs">
+                        {p.limitations === "Extracting..." ? (
+                          <span className="flex items-center gap-1 text-primary"><Loader2 className="w-3 h-3 animate-spin" /> Extracting...</span>
+                        ) : p.limitations}
+                      </td>
                       <td className="p-3">
                         <Button size="sm" variant="outline" onClick={() => setSelectedPaper(p)}>
                           <ExternalLink className="w-3 h-3 mr-1" /> Summary
@@ -250,7 +318,14 @@ const TopicSearch = () => {
                 AI Research Trend Summary
               </h2>
               <div className="prose prose-sm max-w-none text-muted-foreground">
-                {trendSummary || "Generating summary..."}
+                {trendSummary ? (
+                  <ReactMarkdown>{trendSummary}</ReactMarkdown>
+                ) : (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                    <span>Generating AI trend summary...</span>
+                  </div>
+                )}
               </div>
             </motion.div>
           )}

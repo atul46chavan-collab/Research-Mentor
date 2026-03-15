@@ -5,6 +5,7 @@ const getModel = (temp = 0.7) => new ChatGoogleGenerativeAI({
   apiKey: process.env.GOOGLE_API_KEY,
   model: "gemini-flash-latest",
   temperature: temp,
+  maxRetries: 1,
 });
 
 export const chatWithMentor = async (req, res) => {

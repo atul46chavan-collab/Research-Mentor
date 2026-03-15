@@ -17,6 +17,7 @@ export const generateLiteratureReview = async (req, res) => {
       apiKey: process.env.GOOGLE_API_KEY,
       model: "gemini-flash-latest",
       temperature: 0.5,
+      maxRetries: 1,
     });
 
     const template = `

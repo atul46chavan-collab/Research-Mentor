@@ -8,17 +8,19 @@ const BASE_URL = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils';
  * @param {string} topic 
  * @param {number} limit 
  */
-export const fetchPapersByTopic = async (topic, limit = 10) => {
+export const fetchPapersByTopic = async (topic, limit = 5) => {
   try {
     const apiKey = process.env.NCBI_API_KEY;
 
-    // 1. Search for paper IDs
+    // 1. Search for paper IDs – sort by relevance, prefer recent publications
     const searchResponse = await axios.get(`${BASE_URL}/esearch.fcgi`, {
       params: {
         db: 'pubmed',
         term: topic,
         retmode: 'json',
         retmax: limit,
+        sort: 'relevance',
+        datetype: 'pdat',
         api_key: apiKey,
       },
     });

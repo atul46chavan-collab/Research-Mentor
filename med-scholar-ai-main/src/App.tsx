@@ -11,6 +11,7 @@ import LiteratureReview from "@/pages/LiteratureReview";
 import GapFinder from "@/pages/GapFinder";
 import MethodologyBuilder from "@/pages/MethodologyBuilder";
 import CitationChecker from "@/pages/CitationChecker";
+import SearchHistory from "@/pages/SearchHistory";
 import NotFound from "@/pages/NotFound";
 import ResearchBot from "@/components/ResearchBot";
 
@@ -31,6 +32,7 @@ const App = () => (
           <Route path="/gaps" element={<GapFinder />} />
           <Route path="/methodology" element={<MethodologyBuilder />} />
           <Route path="/citations" element={<CitationChecker />} />
+          <Route path="/history" element={<SearchHistory />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
         <ResearchBot />
