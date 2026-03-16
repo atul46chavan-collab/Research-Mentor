@@ -9,6 +9,7 @@ import {
   TrendingUp,
   Clock,
   BookOpen,
+  BookMarked,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Progress } from "@/components/ui/progress";
@@ -35,6 +36,7 @@ const Dashboard = () => {
     { label: "Gap Analysis", icon: Lightbulb, done: papers.length > 0, link: "/gaps" },
     { label: "Methodology Design", icon: FlaskConical, done: false, link: "/methodology" },
     { label: "Citation Verification", icon: CheckCircle, done: false, link: "/citations" },
+    { label: "Journal Guidance", icon: BookMarked, done: false, link: "/journals" },
   ];
 
   const completedSteps = steps.filter((s) => s.done).length;

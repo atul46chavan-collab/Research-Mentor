@@ -1,6 +1,6 @@
 import axios from 'axios';
-import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { PromptTemplate } from "@langchain/core/prompts";
+import { getAIModel } from "../services/aiService.js";
 
 export const findResearchGaps = async (req, res) => {
   try {
@@ -24,20 +24,15 @@ export const findResearchGaps = async (req, res) => {
     }
 
     // 2. Use LangChain for AI Explanation
-    if (!process.env.GOOGLE_API_KEY) {
+    if (!process.env.OPENROUTER_API_KEY) {
        return res.json({ 
          limitations: limitations.length ? limitations : ["No limitations extracted"], 
          clusters, 
-         gap_analysis: "AI Explanation unavailable: Google API Key not found." 
+         gap_analysis: "AI Explanation unavailable: OpenRouter API Key not found." 
        });
     }
 
-    const model = new ChatGoogleGenerativeAI({
-      apiKey: process.env.GOOGLE_API_KEY,
-      model: "gemini-flash-latest",
-      temperature: 0.7,
-      maxRetries: 1,
-    });
+    const model = getAIModel(0.7);
 
     const template = `
       You are an expert research analyst. Review the following research abstracts and identify:
@@ -77,9 +72,9 @@ export const findResearchGaps = async (req, res) => {
         const cleaned = response.content.replace(/```json/g, '').replace(/```/g, '').trim();
         const parsed = JSON.parse(cleaned);
         res.json({
-          ...parsed,
           limitations: parsed.limitations || limitations,
-          clusters: parsed.clusters || clusters
+          clusters: parsed.clusters || clusters,
+          gap_analysis: typeof parsed.gap_analysis === 'string' ? parsed.gap_analysis : JSON.stringify(parsed.gap_analysis) || response.content
         });
       } catch (e) {
         res.json({

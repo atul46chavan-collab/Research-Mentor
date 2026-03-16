@@ -1,6 +1,6 @@
 import * as pubmedService from '../services/pubmedService.js';
-import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { PromptTemplate } from "@langchain/core/prompts";
+import { getAIModel } from "../services/aiService.js";
 
 export const getPapers = async (req, res) => {
   try {
@@ -26,16 +26,11 @@ export const summarizePaper = async (req, res) => {
       return res.status(400).json({ error: "Abstract is required" });
     }
 
-    if (!process.env.GOOGLE_API_KEY) {
-      return res.status(401).json({ error: "Google API Key is missing" });
+    if (!process.env.OPENROUTER_API_KEY) {
+      return res.status(401).json({ error: "OpenRouter API Key is missing" });
     }
 
-    const model = new ChatGoogleGenerativeAI({
-      apiKey: process.env.GOOGLE_API_KEY,
-      model: "gemini-flash-latest",
-      temperature: 0.3,
-      maxRetries: 1,
-    });
+    const model = getAIModel(0.3);
 
     const template = `
       Summarize the following medical research abstract.
@@ -71,15 +66,11 @@ export const getTrendSummary = async (req, res) => {
       return res.status(400).json({ error: "Abstracts are required" });
     }
 
-    if (!process.env.GOOGLE_API_KEY) {
+    if (!process.env.OPENROUTER_API_KEY) {
       return res.json({ summary: `Currently trending research in ${topic} focuses on improving outcomes and clinical efficiency.` });
     }
 
-    const model = new ChatGoogleGenerativeAI({
-      apiKey: process.env.GOOGLE_API_KEY,
-      model: "gemini-flash-latest",
-      temperature: 0.5,
-    });
+    const model = getAIModel(0.5);
 
     const template = `
       Based on the following abstracts of recent research papers on "{topic}", 
@@ -112,16 +103,11 @@ export const extractPaperInsights = async (req, res) => {
     const { abstract } = req.body;
     if (!abstract) return res.status(400).json({ error: "Abstract is required" });
 
-    if (!process.env.GOOGLE_API_KEY) {
+    if (!process.env.OPENROUTER_API_KEY) {
       return res.json({ keyFindings: "API key not configured.", limitations: "API key not configured." });
     }
 
-    const model = new ChatGoogleGenerativeAI({
-      apiKey: process.env.GOOGLE_API_KEY,
-      model: "gemini-flash-latest",
-      temperature: 0.3,
-      maxRetries: 1,
-    });
+    const model = getAIModel(0.3);
 
     const template = `Analyze this research abstract and extract exactly two things:
 

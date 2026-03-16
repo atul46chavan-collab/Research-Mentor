@@ -1,6 +1,8 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+import './database.js';
+
 import express from 'express';
 import cors from 'cors';
 
@@ -15,6 +17,7 @@ import analysisRoutes from './routes/analysisRoutes.js';
 import writingRoutes from './routes/writingRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
 import historyRoutes from './routes/historyRoutes.js';
+import journalRoutes from './routes/journalRoutes.js';
 
 process.on('uncaughtException', (err) => {
   console.error('Uncaught Exception:', err);
@@ -47,6 +50,7 @@ app.use('/api', analysisRoutes);
 app.use('/api', writingRoutes);
 app.use('/api', chatRoutes);
 app.use('/api', historyRoutes);
+app.use('/api', journalRoutes);
 
 // Global Error Handler
 app.use((err, req, res, next) => {

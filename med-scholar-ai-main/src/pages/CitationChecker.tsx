@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { CheckCircle, AlertTriangle, XCircle, Loader2, FileText, SpellCheck, ShieldAlert, Bot, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
+import { CitationGraph } from "@/components/CitationGraph";
 
 type ActiveTab = "citations" | "grammar" | "plagiarism" | "ai-check";
 
@@ -19,22 +20,37 @@ const CitationChecker = () => {
   const [activeTab, setActiveTab] = useState<ActiveTab>("citations");
 
   // Citations state
-  const [researchText, setResearchText] = useState(
-    `According to Sharma (2022), the prevalence of anemia in tribal children remains high. Kumar et al. (2021) identified nutritional deficiency as a primary cause. Recent data from WHO (2023) suggests that global anemia rates are declining. However, Gupta and Singh (2020) argue that rural healthcare access remains limited. A study by Patel (2019) found that iron supplementation programs are effective.`
-  );
-  const [references, setReferences] = useState(
-    `1. Sharma R. Prevalence of anemia among tribal children. Indian J Pediatr. 2022;89(3):45-52.
-2. Kumar A, Singh D. Nutritional deficiency and childhood anemia: A systematic review. BMC Public Health. 2021;21:234.
-3. WHO. Global anemia prevalence report. WHO Technical Report. 2023.
-4. Reddy T, Joshi P. Impact of mid-day meals on hemoglobin levels. J Community Med. 2022;15:78-85.
-5. Banerjee S. Genetic factors in tribal anemia. Am J Hematol. 2022;97(4):112-118.`
-  );
+  const [researchText, setResearchText] = useState("");
+  const [references, setReferences] = useState("");
   const [citationResults, setCitationResults] = useState<CitationResult[]>([]);
 
   // Writing tools state
   const [writingText, setWritingText] = useState("");
   const [writingResult, setWritingResult] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Load data from localStorage on mount
+  useEffect(() => {
+    const savedReview = localStorage.getItem('literature_review_result');
+    const savedPapers = localStorage.getItem('research_papers');
+
+    if (savedReview) {
+      setResearchText(savedReview);
+      setWritingText(savedReview);
+    }
+
+    if (savedPapers) {
+      try {
+        const papers = JSON.parse(savedPapers);
+        const refList = papers.map((p: any, i: number) => 
+          `${i + 1}. ${p.authors}. ${p.title}. ${p.journal || 'Journal'}. ${p.year || ''};${p.volume || ''}(${p.issue || ''}):${p.pages || ''}.`
+        ).join('\n');
+        setReferences(refList);
+      } catch (e) {
+        console.error("Failed to parse papers for references", e);
+      }
+    }
+  }, []);
 
   // Citation checking
   const checkCitations = async () => {
@@ -176,6 +192,14 @@ const CitationChecker = () => {
                       </motion.div>
                     );
                   })}
+                </div>
+              </div>
+
+              {/* CITATION NETWORK GRAPH */}
+              <div className="mt-8">
+                <h2 className="font-display text-lg font-semibold text-foreground mb-4">Citation Network</h2>
+                <div className="h-[400px] w-full rounded-xl border border-border/50 shadow-sm relative overflow-hidden bg-card">
+                  <CitationGraph citationResults={citationResults} />
                 </div>
               </div>
             </motion.div>

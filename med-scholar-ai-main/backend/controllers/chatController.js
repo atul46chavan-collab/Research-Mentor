@@ -1,20 +1,13 @@
-import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { PromptTemplate } from "@langchain/core/prompts";
-
-const getModel = (temp = 0.7) => new ChatGoogleGenerativeAI({
-  apiKey: process.env.GOOGLE_API_KEY,
-  model: "gemini-flash-latest",
-  temperature: temp,
-  maxRetries: 1,
-});
+import { getAIModel } from "../services/aiService.js";
 
 export const chatWithMentor = async (req, res) => {
   try {
     const { message, history, context } = req.body;
     if (!message) return res.status(400).json({ error: "Message is required" });
-    if (!process.env.GOOGLE_API_KEY) return res.status(401).json({ error: "Google API Key missing" });
+    if (!process.env.OPENROUTER_API_KEY) return res.status(401).json({ error: "OpenRouter API Key missing" });
 
-    const model = getModel(0.7);
+    const model = getAIModel(0.7);
     
     const template = `You are the "Academic Research Mentor" AI assistant. Your goal is to help medical students navigate the research workflow: Topic Search, Literature Review, Gap detection, Methodology, and Citation checking.
 

@@ -1,18 +1,13 @@
-import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { PromptTemplate } from "@langchain/core/prompts";
+import { getAIModel } from "../services/aiService.js";
 
-const getModel = (temp = 0.5) => new ChatGoogleGenerativeAI({
-  apiKey: process.env.GOOGLE_API_KEY,
-  model: "gemini-flash-latest",
-  temperature: temp,
-  maxRetries: 1,
-});
+const getModel = (temp = 0.5) => getAIModel(temp);
 
 export const correlationAnalysis = async (req, res) => {
   try {
     const { abstracts } = req.body;
     if (!abstracts || !Array.isArray(abstracts)) return res.status(400).json({ error: "Abstracts required" });
-    if (!process.env.GOOGLE_API_KEY) return res.status(401).json({ error: "Google API Key missing" });
+    if (!process.env.OPENROUTER_API_KEY) return res.status(401).json({ error: "OpenRouter API Key missing" });
 
     const model = getModel(0.5);
     const template = `You are a biostatistician. Analyze the following research abstracts and identify statistically significant correlations between variables mentioned.
@@ -49,7 +44,7 @@ export const systematicReview = async (req, res) => {
   try {
     const { abstracts, topic } = req.body;
     if (!abstracts || !Array.isArray(abstracts)) return res.status(400).json({ error: "Abstracts required" });
-    if (!process.env.GOOGLE_API_KEY) return res.status(401).json({ error: "Google API Key missing" });
+    if (!process.env.OPENROUTER_API_KEY) return res.status(401).json({ error: "OpenRouter API Key missing" });
 
     const model = getModel(0.5);
     const template = `You are a medical research methodologist. Based on the following abstracts on the topic "{topic}", generate a structured systematic review following PRISMA guidelines.
@@ -91,7 +86,7 @@ export const metaAnalysis = async (req, res) => {
   try {
     const { abstracts, topic } = req.body;
     if (!abstracts || !Array.isArray(abstracts)) return res.status(400).json({ error: "Abstracts required" });
-    if (!process.env.GOOGLE_API_KEY) return res.status(401).json({ error: "Google API Key missing" });
+    if (!process.env.OPENROUTER_API_KEY) return res.status(401).json({ error: "OpenRouter API Key missing" });
 
     const model = getModel(0.5);
     const template = `You are a meta-analysis expert. Based on the following research abstracts on "{topic}", generate a meta-analysis summary.

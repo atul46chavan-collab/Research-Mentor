@@ -1,20 +1,15 @@
-import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { PromptTemplate } from "@langchain/core/prompts";
+import { getAIModel } from "../services/aiService.js";
 
 export const generateMethodology = async (req, res) => {
   try {
     const data = req.body;
     
-    if (!process.env.GOOGLE_API_KEY) {
-       return res.status(401).json({ error: "Google API Key is missing." });
+    if (!process.env.OPENROUTER_API_KEY) {
+       return res.status(401).json({ error: "OpenRouter API Key is missing." });
     }
 
-    const model = new ChatGoogleGenerativeAI({
-      apiKey: process.env.GOOGLE_API_KEY,
-      model: "gemini-flash-latest",
-      temperature: 0.7,
-      maxRetries: 1,
-    });
+    const model = getAIModel(0.7);
 
     const template = `
       You are an expert medical researcher. Based on the following study parameters, 

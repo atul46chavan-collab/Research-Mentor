@@ -11,8 +11,22 @@ import {
   History,
   Menu,
   X,
+  BookMarked,
+  User,
+  LogOut,
 } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ModeToggle } from "./ModeToggle";
 
 const navItems = [
   { path: "/", label: "Home", icon: BookOpen },
@@ -23,11 +37,18 @@ const navItems = [
   { path: "/methodology", label: "Methodology", icon: FlaskConical },
   { path: "/citations", label: "Citations", icon: CheckCircle },
   { path: "/history", label: "History", icon: History },
+  { path: "/journals", label: "Journals", icon: BookMarked },
 ];
 
 const AppNavbar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const handleLogout = () => {
+    // Implement actual logout logic here if needed
+    navigate("/login");
+  };
 
   return (
     <nav className="sticky top-0 z-50 glass-card border-b border-border/50">
@@ -69,13 +90,48 @@ const AppNavbar = () => {
             })}
           </div>
 
-          {/* Mobile toggle */}
-          <button
-            className="lg:hidden p-2 text-muted-foreground"
-            onClick={() => setMobileOpen(!mobileOpen)}
-          >
-            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
+          {/* Right Side Items */}
+          <div className="flex items-center gap-4">
+            <ModeToggle />
+            
+            {/* User Profile Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger className="focus:outline-none">
+                <Avatar className="w-9 h-9 border-2 border-primary/20 hover:border-primary/50 transition-colors cursor-pointer">
+                  <AvatarImage src="https://github.com/shadcn.png" alt="@researcher" />
+                  <AvatarFallback className="bg-primary/10 text-primary">RM</AvatarFallback>
+                </Avatar>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 mt-2">
+                <DropdownMenuLabel>
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">Researcher</p>
+                    <p className="text-xs leading-none text-muted-foreground">
+                      researcher@university.edu
+                    </p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="cursor-pointer">
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Profile</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:bg-red-50 focus:text-red-600 cursor-pointer">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Mobile toggle */}
+            <button
+              className="lg:hidden p-2 text-muted-foreground"
+              onClick={() => setMobileOpen(!mobileOpen)}
+            >
+              {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          </div>
         </div>
 
         {/* Mobile nav */}
